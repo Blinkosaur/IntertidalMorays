@@ -2,9 +2,9 @@
 
 # Authors: 
 Maya M. McElfish - University of California Santa Cruz
-Nicolas A. Hess - Eckard University 
-Helena B. Lewis - Eckard University 
-Sacha O'Conner - University of California Santa Cruz
+Nicolas A. Hess - Eckerd University 
+Helena B. Lewis - Eckerd University 
+Sacha E. O'Conner - University of California Santa Cruz
 Rita S. Mehta - University of California Santa Cruz
 
 # Research Goals:
