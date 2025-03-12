@@ -1,20 +1,20 @@
-Intertidal Morays! 
+## Intertidal Morays! 
 
-**Authors: **
+# Authors: 
 Maya M. McElfish - University of California Santa Cruz
 Nicolas A. Hess - Eckard University 
 Helena B. Lewis - Eckard University 
 Sacha O'Conner - University of California Santa Cruz
 Rita S. Mehta - University of California Santa Cruz
 
-**Research Goals: **
+# Research Goals:
 1) Document if G. mordax can use chemical stimuli alone to detect prey and to navigate to a specific prey location
 2) Assess if behavioral responses vary between chemical cues from different prey species
 3) Test if these cues can be used in both fully submerged and partial exposed (intertidal) contexts. 
 
 To accomplish this, we conducted two summers of field-based behavioral experiments on Santa Catalina Island, California, testing chemical stimuli from four prey types during both high and low tidal conditions, the former necessitating partially emerged locomotion over rocky substrate. 
 
-## Data Details - below lists the column names and describes that content of each column for MultiSummer.csv 
+# Data Details - below lists the column names and describes that content of each column for MultiSummer.csv 
 
 Summer:  Sampling year -  2022 or 2023
 Site: Sample Sites 1-8 (experimental location, repeatedly tested for each treatment, tidal condition, and year)
