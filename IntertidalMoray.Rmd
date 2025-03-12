@@ -1,0 +1,1532 @@
+
+Authors: 
+Maya M. McElfish - University of California Santa Cruz
+Nicolas Hess - Eckard University 
+Helena B. Lewis - Eckard University 
+Sacha O'Conner - University of California Santa Cruz
+Rita S. Mehta - University of California Santa Cruz
+
+Research Goals: 
+1) Document if G. mordax can use chemical stimuli alone to detect prey and to navigate to a specific prey location
+2) Assess if behavioral responses vary between chemical cues from different prey species
+3) Test if these cues can be used in both fully submerged and partial exposed (intertidal) contexts. 
+
+
+To accomplish this, we conducted two summers of field-based behavioral experiments on Santa Catalina Island, California, testing chemical stimuli from four prey types during both high and low tidal conditions, the former necessitating partially emerged locomotion over rocky substrate. 
+
+
+
+# REQUIRED PACKAGES
+```{R The Libraries}
+#All the libraries 
+library(tidyverse)
+library(ggplot2)
+library(gamlss)
+library(ggpubr)
+library(rstatix)
+library(png)
+library(lme4)
+library(ggsignif)
+library(glmmTMB)
+library("emmeans")
+library(dplyr)
+library(MASS)
+library(png)
+library(DHARMa)
+library(patchwork)
+library(ggridges)
+```
+
+## DATASETS & DATA INFO 
+
+### Column Names & Contents 
+ Summer:  Sampling year -  2022 or 2023
+ 
+ Site: Sample Sites 1-8 (experimental location, repeatedly tested for each treatment, tidal condition, and year)
+ 
+ Depth: Submerged or Exposed (submerged = > 1m, Exposed < 5cm)
+ 
+ Treatment:  Anchovy, Kelpbass, Squid, Octopus, Control (types of chemical cue)
+ 
+ Trial Length: Time in Seconds - should be ~900, but some trials ran shorter due to disturbances. 
+ 
+ Trial_Length_Frame_Adjusted: Trial length, but starting when the eel enters the frame for the first time -- so 1st frame enter = start of the trial [NOT USED IN THESE ANALYSES]
+ 
+ VisitedTrial: Yes/No (Did an eel visit this trial??)
+ 
+ Arrival_Frame: Time stamp in seconds for the first eel arriving into the frame
+ 
+ VisitedTube: Yes/No (Did an eel visit the target tube during this trial)?
+ 
+ Arrival_Tube: Time stamp in seconds for Arrival of first eel to enter target tube
+ 
+ Tube_Location_Time: Time in seconds (How long it took the eel to find the target tube after entering the frame)
+ 
+ DurationTube: Time in seconds (time span at least 1 eel was present in the target tube)
+ 
+ MaxTube: Integer (maximum eels in target tube at a time)
+ 
+ TubeEnter: Integer Tally (number of times any eel during a trial entered the target tube) 
+ 
+ FrameEnter23: Integer Tally (for the 2023 trials only; the number of times any eel entered the frame) - Data not used here 
+ 
+ Notes: Any notes related to the trial
+ 
+### Reading in the data
+ 
+```{r - Reading in dataset}
+
+#Reading in the dataset for both summers
+MultiSummerData = read.csv("~/Desktop/ArrRrrr/Chapter 3 - Sensory Modalities /Chap3_OlfTidal/data/MultiSummer.csv")
+
+head(MultiSummerData)
+
+#Making things factors:
+MultiSummerData$Treatment = factor(MultiSummerData$Treatment)
+MultiSummerData$Depth = factor(MultiSummerData$Depth)
+MultiSummerData$VisitedTrial = factor(MultiSummerData$VisitedTrial)
+MultiSummerData$VisitedTube = factor(MultiSummerData$VisitedTube)
+
+MultiSummerData
+
+
+# Filtering the data by Depth
+
+# EXPOSED
+Exposed <- MultiSummerData %>% filter(Depth == "Exposed")
+head(Exposed) 
+
+# SUBMERGED
+Submerged <- MultiSummerData %>% filter(Depth == "Submerged")
+head(Submerged) 
+```
+
+
+## DID THE EELS VISIT?? 
+Yes/No - did an eel visit the trial/target tube 
+
+
+### 1. Exposed Stats - Visits
+Comparing the number of visitations between treatments:
+
+TRIAL VISITS
+ ------------------------
+Control:Anchovy - 0.001
+Control:Kelp Bass - 0.001 
+Control: Octopus - 0.001 
+Control: Squid - 0.001 
+
+No significant differences between prey treatments
+
+ ------------------------------------------------------------------------------
+ ------------------------------------------------------------------------------
+ ------------------------------------------------------------------------------
+
+TUBE VISITS
+------------------ MODEL 
+Control:Anchovy - 0.001 
+Control:Kelp Bass - NSD 
+Control: Octopus - 0.01
+Control: Squid -  0.00 
+
+Anchovy:Kelp Bass - 0.001
+Anchovy:Octopus -  0.01
+Squid:Kelp Bass -  0.001
+Squid:Octopus - 0.0
+Octopus: Kelp Bass - NSD
+
+
+
+```{r Exposed - Visited Stats}
+
+### ----- TRIAL VISITS ---------------------------------------------------------
+
+# Relevel Treatment for the reference level
+Exposed$Treatment <- relevel(Exposed$Treatment, ref = "Control")
+
+# Fit logistic regression model
+Exp_VisitedTrial_model <- glmer(VisitedTrial ~ Treatment + (1|Site) + (1|Summer),
+                        data = Exposed, 
+                        family = binomial(link = "logit"))
+
+summary(Exp_VisitedTrial_model)
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_VisitedTrial_model)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+
+### ----- TARGET TUBE VISITS ---------------------------------------------------------
+
+# Relevel Treatment for the reference level
+Exposed$Treatment <- relevel(Exposed$Treatment, ref = "Control")
+
+# Fit logistic regression model
+Exp_VisitedTube_model <- glmer(VisitedTube ~ Treatment + (1|Site) + (1|Summer),
+                        data = Exposed, 
+                        family = binomial(link = "logit"))
+
+summary (Exp_VisitedTube_model)
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_VisitedTube_model)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+
+### 2. Sumberged Stats - Visits
+
+ -------- TRIAL VISITS ------------------------------------------------
+ contrast            Model --- 
+ Control:Anchovy       NA --- 100%
+ Control:Kelpbass      0.01
+ Control:Octopus       NA --- 100%
+ Control:Squid         0.01
+ 
+Prey Treatments: NSD 
+ 
+ -------- TUBE VISITS ------------------------------------------------
+ contrast            Model 
+ Control:Anchovy       0.01
+ Control:Kelpbass      0.01
+ Control:Octopus       NA --- 100%
+ Control:Squid         0.01
+ 
+ Anchovy:Kelpbass      NSD 
+ Anchovy:Octopus       NSD
+ Anchovy:Squid         NSD 
+ Kelpbass:Octopus      NSD 
+ Kelpbass:Squid        NSD 
+ Octopus:Squid         NSD
+ 
+```{r Submerged - Visited Stats}
+
+### ----- TRIAL VISITS ---------------------------------------------------------
+
+# Relevel Treatment variable for reference level
+Submerged$Treatment <- relevel(Submerged$Treatment, ref = "Control")
+
+# Fit logistic regression model
+Sub_VisitedTrial_model <- glmer(VisitedTrial ~ Treatment + (1|Site) + (1|Summer),
+                        data = Submerged, 
+                        family = binomial(link = "logit"))
+
+summary(Sub_VisitedTrial_model)
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_VisitedTrial_model)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+
+### ----- TUBE VISITS ---------------------------------------------------------
+
+
+# Relevel Treatment for reference level
+Submerged$Treatment <- relevel(Submerged$Treatment, ref = "Control")
+
+# Fit logistic regression model
+Sub_VisitedTube_model <- glmer(VisitedTube ~ Treatment + (1|Site) + (1|Summer),
+                        data = Submerged, 
+                        family = binomial(link = "logit"))
+
+summary (Sub_VisitedTube_model)
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Sub_VisitedTube_model)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+
+
+### 3. Graphics
+
+###### Exp Data Prep
+```{r - TRIAL VISIT - Graphic Data Prep}
+
+# EXPOSED
+ExposedVisits_Long <- Exposed %>%
+  dplyr::select(Summer, Site, Treatment, VisitedTrial, VisitedTube) %>% 
+  pivot_longer(cols = c(VisitedTrial, VisitedTube), 
+               names_to = "VisitType", 
+               values_to = "Data")  %>% 
+  mutate(VisitType = recode(VisitType, "VisitedTrial" = "Morays in Frame", "VisitedTube" = "Morays in Target"))
+
+
+#Making Code a factor:
+ExposedVisits_Long$VisitType = factor(ExposedVisits_Long$VisitType)
+
+ExposedVisits_Long
+
+
+# Calculating the number of visitations 
+Exposed_Visit_MeanSE <- ExposedVisits_Long %>%
+  group_by(VisitType, Treatment) %>%
+  summarize(mean = mean(Data == "Yes", na.rm = TRUE),
+            sd = sd(Data == "Yes", na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+# Print the resulting data frame
+print(Exposed_Visit_MeanSE)
+
+```
+
+
+#### Exp Visit Graph
+```{r - Exposed VISIT Graphic}
+# ------EXPOSED GRAPHIC -------------------------------------------------------
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Exp_Visited_signif <- tribble(
+  ~Treatment,  ~VisitType,              ~Signif,
+  "Control",   "Morays in Frame",    "a",    
+  "Squid",     "Morays in Frame",    "b",    
+  "Octopus",   "Morays in Frame",    "b",    
+  "Anchovy",   "Morays in Frame",    "b",    
+  "Kelpbass",  "Morays in Frame",    "b",    
+  "Control",   "Morays in Target",     "a",    
+  "Squid",     "Morays in Target",     "b",    
+  "Octopus",   "Morays in Target",     "c",    
+  "Anchovy",   "Morays in Target",     "b",    
+  "Kelpbass",  "Morays in Target",     "ac"
+) %>% 
+  left_join(transmute(Exposed_Visit_MeanSE, Treatment, VisitType, mean, se), 
+            by = c("Treatment", "VisitType")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 0.05)  # Adjust y-position to place significance labels above the bars
+
+
+Exposed_Visits = Exposed_Visit_MeanSE %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(Treatment, mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+  geom_text(aes(y = y, label = Signif), Exp_Visited_signif , size =5) +
+  scale_fill_manual(values = c("grey","pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Exposed Trials", x = "") +
+  facet_wrap(. ~ VisitType, scales = "free") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y =  element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        legend.position="none",
+        panel.spacing.x = unit(2, "lines"),
+        plot.title = element_text(hjust =.5, size = 10, colour = "black"),
+        strip.background = element_rect(colour = "black", fill = "ivory3"),
+        strip.placement = "inside",
+        strip.text = element_text(size = 14, face="bold"),
+        panel.background = element_rect(fill = "white", color = "black"), 
+        plot.background = element_rect(fill = 'transparent', color = NA))
+
+Exposed_Visits
+```
+
+
+###### Sub Data Prep
+
+```{r - Submerged - Graphic Data Prep}
+
+SubmergedVisits_Long <- Submerged %>%
+   dplyr::select(Summer, Site, Treatment, VisitedTrial, VisitedTube) %>% 
+  pivot_longer(cols = c(VisitedTrial, VisitedTube), 
+               names_to = "VisitType", 
+               values_to = "Data") %>% 
+  mutate(VisitType = recode(VisitType, "VisitedTrial" = "Morays in Frame", "VisitedTube" = "Morays in Target"))
+
+#Making Code a factor:
+SubmergedVisits_Long$VisitType = factor(SubmergedVisits_Long$VisitType)
+
+SubmergedVisits_Long
+
+
+# Calculating the number of visitations 
+Submerged_VisitTrial_MeanSE <- SubmergedVisits_Long %>%
+  group_by(VisitType, Treatment) %>%
+  summarize(mean = mean(Data == "Yes", na.rm = TRUE),
+            sd = sd(Data == "Yes", na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+# Print the resulting data frame
+print(Submerged_VisitTrial_MeanSE)
+```
+
+###### Sub Data Graph
+
+```{r - Submerged VISIT Graphic}
+# ------SUBMERGED GRAPHIC -------------------------------------------------------
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Sub_Visited_signif <- tribble(
+  ~Treatment,  ~VisitType,              ~Signif,
+  "Control",   "Morays in Frame",    "a",    
+  "Squid",     "Morays in Frame",    "b",    
+  "Octopus",   "Morays in Frame",    "b",    
+  "Anchovy",   "Morays in Frame",    "b",    
+  "Kelpbass",  "Morays in Frame",    "b",    
+  "Control",   "Morays in Target",    "a",    
+  "Squid",     "Morays in Target",    "b",    
+  "Octopus",   "Morays in Target",    "b",    
+  "Anchovy",   "Morays in Target",    "b",    
+  "Kelpbass",  "Morays in Target",    "b"
+) %>% 
+  left_join(transmute(Submerged_VisitTrial_MeanSE, Treatment, VisitType, mean, se), 
+            by = c("Treatment", "VisitType")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 0.05)  # Adjust y-position to place significance labels above the bars
+
+
+Submerged_Visits = Submerged_VisitTrial_MeanSE %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(Treatment, mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+  geom_text(aes(y = y, label = Signif), Sub_Visited_signif , size =5) +
+  scale_fill_manual(values = c("grey","pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Submerged Trials", x = "") +
+  facet_wrap(. ~ VisitType, scales = "free") +
+  theme_classic() +
+  theme (axis.text.x = element_text(size = 13, angle = 0),
+        axis.text.y =  element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        legend.position="none",
+        panel.spacing.x = unit(2, "lines"),
+        plot.title = element_text(hjust =.5, size = 10, colour = "black"),
+        strip.background = element_rect(colour = "black", fill = "lightcyan3"),
+        strip.placement = "inside",
+        strip.text = element_text(size = 14, face="bold"),
+        panel.background = element_rect(fill = "white", color = "black"), 
+        plot.background = element_rect(fill = 'transparent', color = NA))
+
+Submerged_Visits
+
+```
+
+#### Combined Visit Graph
+```{r Visitation Graphics Combined}
+combined_visit_plot <- Exposed_Visits / Submerged_Visits + 
+  plot_layout(heights = c(8, 8)) & # Adjust heights for even spacing
+  theme(plot.background = element_rect(fill = "transparent", color = NA))
+
+
+ggsave("visitgraph.png", plot = combined_visit_plot, width = 10, height = 6, dpi = 500)
+
+```
+
+## Ok but how MANY EELS?? 
+NOTE: There was high 0 inflation in controls - excluded from analysis
+
+
+### 1. Exposed Stats - MaxN
+
+ -------- MAXN Exposed Summary ---------------------------------------------
+ 
+ WITHOUT CONTROL: 
+ Anchovy:Kelpbass      0.05 
+ Anchovy:Octopus       0.05 
+ Anchovy:Squid         NSD 
+ Kelpbass:Octopus      NSD 
+ Kelpbass:Squid        0.05 
+ Octopus:Squid         0.05 
+
+
+``` {r - Exposed Max Tube Stats}
+head(Exposed)
+
+Exposed_NoCon <- Exposed %>% 
+  filter(Treatment != "Control")
+
+# Code to Relevel Treatment variable: 
+Exposed_NoCon$Treatment <- relevel(Exposed_NoCon$Treatment, ref = "Anchovy")
+
+# Fit the Poisson GLM -- Random effects removed because this lowered the AIC value and showed better model fit in the diagnostic tests
+Exp_MaxN_Poisson <- glm(MaxTube ~ Treatment, 
+                           data = Exposed_NoCon, 
+                           family = poisson(link = "log"))
+
+summary(Exp_MaxN_Poisson)
+
+# With Control
+#  AIC      BIC  
+#  137.1    153.4   
+
+# Without Control
+# AIC      BIC  
+#  127.6   140.1  
+
+# Withour Control & Random Effects
+# AIC: 123.55
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_MaxN_Poisson)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+
+```
+
+### 2. Submerged Stats - MaxN
+
+ Anchovy:Kelpbass      NSD 
+ Anchovy:Octopus       NSD 
+ Anchovy:Squid         NSD 
+ Kelpbass:Octopus      NSD
+ Kelpbass:Squid        NSD 
+ Octopus:Squid         NSD 
+
+``` {r - Submerged MaxN Tube Stats}
+head(Submerged)
+
+Submerged_NoCon <- Submerged %>% 
+  filter(Treatment != "Control")
+
+# Relevel Treatment variable for reference level
+Submerged$Treatment <- relevel(Submerged$Treatment, ref = "Anchovy")
+
+# 'Treatment' and 'MaxTube' as fixed effects, and 'Site' and 'Summer' as a random effect
+Sub_MaxN_Poisson <- glmer(MaxTube ~ Treatment + (1 | Site) + (1|Summer), 
+                           data = Submerged_NoCon, 
+                           family = poisson(link = "log"))
+
+summary(Sub_MaxN_Poisson)
+
+   # AIC      BIC   -- With Control
+   # 183.4    199.3 
+
+  #   AIC      BIC  -- Without Control
+  # 169.4    181.6  
+
+# Simulate residuals
+sim_res <- simulateResiduals(Sub_MaxN_Poisson)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+
+```
+
+
+### 3. Graphics Prep
+
+```{r MaxN Graphics Prep}
+
+# DATA PREP
+MaxN = MultiSummerData %>% 
+  dplyr::select(Site, Depth, Treatment, MaxTube)
+
+MaxN
+
+# Calculating Mean & SE For Graphics
+MaxN_MeanSE = MaxN %>%
+  group_by(Treatment, Depth) %>%
+  summarize(mean = mean(MaxTube, na.rm = TRUE),
+            sd = sd(MaxTube, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+MaxN_MeanSE
+
+#Calculating SUM Total eels
+MaxN_SumEx = MaxN %>%
+  filter(Depth == "Exposed") %>% 
+  group_by(Treatment) %>%
+  summarize(sum = sum(MaxTube, na.rm = TRUE))
+
+MaxN_SumEx
+
+
+MaxN_SumSub = MaxN %>%
+  filter(Depth == "Submerged") %>% 
+  group_by(Treatment) %>%
+  summarize(sum = sum(MaxTube, na.rm = TRUE))
+```
+
+### 4. Graphics
+
+### Exp Max
+
+```{r MaxN Exp Graphics}
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+MaxN_Ex <- MaxN %>% 
+  filter(Depth == "Exposed")
+
+Sum_Lab_Ex <- tribble(
+  ~Treatment,  ~Depth,      ~Lab,
+  "Control",   "Exposed",    "1",    
+  "Squid",     "Exposed",    "15",    
+  "Octopus",   "Exposed",    "6",    
+  "Anchovy",   "Exposed",    "15",    
+  "Kelpbass",  "Exposed",    "5",    
+) %>% 
+  left_join(transmute(MaxN_Ex, Site, Depth, Treatment, MaxTube), 
+            by = c("Treatment", "Depth")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) 
+
+
+MaxN_Ex_Graphic = MaxN_MeanSE %>%  
+  filter(Depth == "Exposed") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(x = Treatment, y = mean, fill = Treatment, color = Treatment)) +  # Set color by Treatment
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) + 
+  geom_jitter(data = MaxN_Ex, 
+            aes(x = Treatment, y = MaxTube, color = Treatment), 
+            width = 0.2, height = 0, alpha = 1) +
+  labs(y = "", x = "", title = "Exposed Trials") +
+  geom_text(aes(y = 3.5, label = Lab, color = "black"), Sum_Lab_Ex, size = 5) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+  scale_fill_manual(values = c(  # Custom colors for Treatment
+    "Control" = "grey",
+    "Squid" = "pink2",
+    "Octopus" = "mediumpurple1",
+    "Anchovy" = "lightgoldenrod",
+    "Kelpbass" = "darkolivegreen3")) +
+  scale_color_manual(values = c(  # Custom colors for jitter points
+    "Control" = "grey1",
+    "Squid" = "pink4",
+    "Octopus" = "mediumpurple4",
+    "Anchovy" = "lightgoldenrod4",
+    "Kelpbass" = "darkolivegreen4")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15, angle = 0),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 20, face = "bold", color = "ivory4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.grid.major.y = element_line(linetype = "dashed"),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "ivory", color = "#fbf9f4")) +
+  scale_y_continuous(limits = c(0, 4))  
+
+MaxN_Ex_Graphic
+
+
+
+```
+
+### Sub Max
+
+```{r MaxN Sub Graphics}
+# Creating a data frame with pairwise significance for each facet (VisitType)
+
+MaxN_Sub <- MaxN %>% 
+  filter(Depth == "Submerged")
+
+
+Sum_Lab_Sub <- tribble(
+  ~Treatment,  ~Depth,      ~Lab,
+  "Control",   "Submerged",    "2",    
+  "Squid",     "Submerged",    "29",    
+  "Octopus",   "Submerged",    "17",    
+  "Anchovy",   "Submerged",    "31",    
+  "Kelpbass",  "Submerged",    "17",    
+) %>% 
+  left_join(transmute(MaxN_Sub, Site, Depth, Treatment, MaxTube), 
+            by = c("Treatment", "Depth")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) # Adjust y-position to place significance labels above the bars
+
+
+MaxN_Sub_Graphic = MaxN_MeanSE %>%  
+  filter(Depth == "Submerged") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(x = Treatment, y = mean, fill = Treatment, color = Treatment)) +  # Set color by Treatment
+ geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+  geom_jitter(data = MaxN_Sub, 
+            aes(x = Treatment, y = MaxTube, color = Treatment), 
+            width = 0.2, height = 0, alpha = 1) + # Jitter points with Treatment-based color
+  labs(y = "", x = "", title = "Submerged Trials") +
+  geom_text(aes(y = 4.5, label = Lab, color = "black"), Sum_Lab_Sub, size = 5) +
+  scale_fill_manual(values = c(  # Custom colors for Treatment
+    "Control" = "grey",
+    "Squid" = "pink2",
+    "Octopus" = "mediumpurple1",
+    "Anchovy" = "lightgoldenrod",
+    "Kelpbass" = "darkolivegreen3")) +
+  scale_color_manual(values = c(  # Custom colors for jitter points
+    "Control" = "grey1",
+    "Squid" = "pink4",
+    "Octopus" = "mediumpurple4",
+    "Anchovy" = "lightgoldenrod4",
+    "Kelpbass" = "darkolivegreen4")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15, angle = 0),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 20, face = "bold", color = "lightcyan4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.grid.major.y = element_line(linetype = "dashed"),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "lightcyan2", color = NA)) +
+  scale_y_continuous(limits = c(0, 5))  
+
+MaxN_Sub_Graphic
+
+
+```
+
+```{r Max N Combo}
+combined_MaxN_plot <- MaxN_Ex_Graphic /MaxN_Sub_Graphic + 
+  plot_layout(heights = c(8, 8))  # Adjust heights for even spacing
+
+
+ggsave("MaxN.png", plot = combined_MaxN_plot, width = 7, height = 10, dpi = 500)
+```
+
+
+
+# ARRIVAL
+How long did it take morays to locate the tube after first entering the frame?
+
+Control removed from anaylsis an graphics. We only had 2 eels come to the submerged treatments and 1 come to the exposed treatments. We feel that plotting this treatment would be visually misleading due to the lack of data. 
+
+## 1.  Stats
+
+#### --- Exposed Arrival 
+
+ -------------------SUMMARY----------------------------------------------------
+ WITHOUT CONTROL: 
+                      Model 
+ Anchovy:Kelpbass      NSD
+ Anchovy:Octopus       NSD 
+ Anchovy:Squid         0.01 
+ Kelpbass:Octopus      NSD
+ Kelpbass:Squid        NSD 
+ Octopus:Squid         NSD
+
+```{r - Exposed Arrival Stats}
+head(Exposed_NoCon)
+
+# Add a small positive value to the Tube_Location_Time variable because non-positive values are not allowed for gamma distributions
+Exposed_NoCon$Tube_Location_Time_adjusted <- Exposed_NoCon$Tube_Location_Time + 0.1
+
+# Relevel Treatment variable for preferred reference level
+Exposed_NoCon$Treatment <- relevel(Exposed_NoCon$Treatment, ref = "Anchovy")
+
+# Fit the gamma GLMM with 'Tube_Location_Time_adjusted' as the response variable,  'Treatment'  fixed effects, and 'Site' and "Summer" as a random effect
+Exp_TubeArr_Gamma <- glmer(Tube_Location_Time_adjusted ~ Treatment + (1 | Site) + (1 | Summer), 
+                     data = Exposed_NoCon, 
+                     family = Gamma(link = "log"))
+
+summary(Exp_TubeArr_Gamma)
+
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_TubeArr_Gamma)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+#### --- Submerged Arrival 
+
+------------------SUMMARY----------------------------------------------------
+ WITHOUT CONTROL: 
+                      Model 
+ Anchovy:Kelpbass      NSD
+ Anchovy:Octopus       NSD
+ Anchovy:Squid         NSD
+ Kelpbass:Octopus      NSD 
+ Kelpbass:Squid        NSD 
+ Octopus:Squid         NSD
+
+```{r - Exposed Arrival Stats}
+Sub_NoCon <- Submerged %>% 
+  filter(Treatment != "Control")
+
+head(Sub_NoCon)
+
+# Add a small positive value to the Tube_Location_Time_adjusted variable
+Sub_NoCon$Tube_Location_Time_adjusted <- Sub_NoCon$Tube_Location_Time + 0.1
+
+# Relevel Treatment so preferred variable becomes the reference level
+Sub_NoCon$Treatment <- relevel(Sub_NoCon$Treatment, ref = "Anchovy")
+
+# Fit the gamma GLMM with 'Duration' as the response variable
+# 'Treatment'  fixed effects, and 'Site' and 'Summer' as random effects
+Sub_TubeArr_Gamma <- glmer(Tube_Location_Time_adjusted ~ Treatment + (1 | Site) + (1 | Summer), 
+                     data = Sub_NoCon, 
+                     family = Gamma(link = "log"))
+
+summary(Sub_TubeArr_Gamma)
+
+# MODEL CHECK
+# Simulate residuals
+sim_res <- simulateResiduals(Sub_TubeArr_Gamma)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+
+
+### 2. Graphics
+Control exlcuded from graphics; data deficiency would be misleading to plot
+
+
+#### Graphic Prep: Applies to both Arrival & Duration Graphics
+```{r - Time Means SE}
+# EXPOSED
+Exposed_Times_Long <- Exposed %>%
+  pivot_longer(cols = c(Tube_Location_Time, DurationTube), 
+               names_to = "Times", 
+               values_to = "Data") %>% 
+    mutate(Times = recode(Times, "Tube_Location_Time" = "Arrival to Tube - Exposed", "DurationTube" = "Duration in Tube - Exposed"))
+
+
+#Making Code a factor:
+Exposed_Times_Long$Times = factor(Exposed_Times_Long$Times)
+
+head(Exposed_Times_Long)
+
+#Calculating Mean & SE For Graphics 
+Exposed_Times_MeanSE = Exposed_Times_Long %>%
+  filter(Treatment != "Control") %>% 
+  group_by(Times, Treatment) %>%
+  summarize(mean = mean(Data, na.rm = TRUE),
+            sd = sd(Data, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+Exposed_Times_MeanSE 
+
+Exposed_Lump_MeanSE = Exposed_Times_Long %>%
+  filter(Treatment != "Control") %>% 
+  group_by(Times) %>%
+  summarize(mean = mean(Data, na.rm = TRUE),
+            sd = sd(Data, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+Exposed_Lump_MeanSE 
+
+# -----------------------------------------
+
+# SUBMERGED
+
+Submerged_Times_Long <- Submerged %>%
+  pivot_longer(cols = c(Tube_Location_Time, DurationTube), 
+               names_to = "Times", 
+               values_to = "Data") %>% 
+    mutate(Times = recode(Times, "Tube_Location_Time" = "Arrival to Tube - Submerged", "DurationTube" = "Duration in Tube - Submerged"))
+
+
+#Making Code a factor:
+Submerged_Times_Long$Times = factor(Submerged_Times_Long$Times)
+
+head(Submerged_Times_Long)
+
+#Calculating Mean & SE For Graphics 
+Submerged_Times_MeanSE = Submerged_Times_Long %>%
+  filter(Treatment != "Control") %>% 
+  group_by(Times, Treatment) %>%
+  summarize(mean = mean(Data, na.rm = TRUE),
+            sd = sd(Data, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+Submerged_Times_MeanSE 
+
+## Means for all the things but lumped together.  
+#Calculating Mean & SE For Graphics 
+Submerged_Lump_MeanSE = Submerged_Times_Long %>%
+  filter(Treatment != "Control") %>% 
+  group_by(Times) %>%
+  summarize(mean = mean(Data, na.rm = TRUE),
+            sd = sd(Data, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+Submerged_Lump_MeanSE 
+
+
+
+```
+
+
+### --- Exposed Arrival Time
+
+``` {r - Arrival Exp}
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Exp_ArrTimes_signif <- tribble(
+  ~Treatment,  ~Times,                      ~Signif,
+  "Squid",     "Arrival to Tube - Exposed",    "a",    
+  "Octopus",   "Arrival to Tube - Exposed",    "ab",    
+  "Anchovy",   "Arrival to Tube - Exposed",    "b",    
+  "Kelpbass",  "Arrival to Tube - Exposed",    "ab",    
+) %>% 
+  left_join(transmute(Exposed_Times_MeanSE , Treatment, Times, mean, se), 
+            by = c("Treatment", "Times")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         x = mean + se + 0.07*100)  # Adjust y-position to place significance labels above the bars
+
+
+Exposed_Arrival = Exposed_Times_MeanSE  %>% 
+  filter(Times ==  "Arrival to Tube - Exposed") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(y = Treatment, x = mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+ geom_errorbar(aes(xmin = mean - se, xmax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(x = x, label = Signif), Exp_ArrTimes_signif  , size =5) +
+  scale_fill_manual(values = c("pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(x = "", y = "", title = "Exposed") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15, angle = 0),
+        axis.title.x = element_text(size = 15, color = "grey4"),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 25),
+        plot.title = element_text(size = 20, face = "bold", color = "ivory4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "ivory", color = "#fbf9f4")) +
+    scale_x_continuous(limits = c(0, 250))  
+
+Exposed_Arrival
+
+```
+
+
+### --- Submerged Arrival Time
+``` {r - Sub Arrival}
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Sub_ArrTimes_signif <- tribble(
+  ~Treatment,  ~Times,                      ~Signif,
+  "Squid",     "Arrival to Tube - Submerged",     "a",    
+  "Octopus",   "Arrival to Tube - Submerged",    "a",    
+  "Anchovy",   "Arrival to Tube - Submerged",    "a",    
+  "Kelpbass",  "Arrival to Tube - Submerged",    "a",    
+) %>% 
+  left_join(transmute(Submerged_Times_MeanSE , Treatment, Times, mean, se), 
+            by = c("Treatment", "Times")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         x = mean + se + 10)  # Adjust y-position to place significance labels above the bars
+
+
+Submerged_Arrival = Submerged_Times_MeanSE  %>% 
+  filter(Times ==  "Arrival to Tube - Submerged") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(y = Treatment, x = mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+ geom_errorbar(aes(xmin = mean - se, xmax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(x = x, label = Signif), Sub_ArrTimes_signif  , size =5) +
+  scale_fill_manual(values = c("pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(x = "Arrival Time to Target (Seconds)", y = "", title = "Submerged") +
+  # facet wrap + the label code from above for our new label names
+  #facet_wrap(. ~ Times, scales = "free") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15),
+        axis.title.x = element_text(size = 15, margin = margin(t = 15)),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 20, face = "bold", color = "lightcyan4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "lightcyan2", color = NA)) +
+  scale_x_continuous(limits = c(0, 250))  
+
+Submerged_Arrival
+
+```
+
+```{r Arrival Graphics Combined}
+
+# Combine the two plots
+combined_arrival_plot <- Exposed_Arrival / Submerged_Arrival
+
+combined_arrival_plot
+
+ggsave("combined_arrival_plot.png", plot = combined_arrival_plot, width = 8, height = 8, dpi = 500)
+
+```
+
+
+
+
+
+```{r Dur Graphics Combined}
+
+# Combine the two plots
+combined_duration_plot <- Exposed_Duration / Submerged_Duration 
+
+combined_duration_plot
+
+ggsave("combined_duration_plot.png", plot = combined_duration_plot, width = 8, height = 8, dpi = 500)
+
+```
+
+## DURATION 
+## 1. Stats 
+
+#### --- Exposed Duration
+Control Removed
+ ----------------- Model 
+Anchovy:Squid       NSD 
+Anchovy:Kelp Bass   0.001    
+Anchovy:Octopus     0.00    
+Squid:Octopus       0.001    
+Squid:Kelp Bass     0.01    
+Octopus:Kelp Bass   NSD     
+
+
+```{r - Exposed Duration Stats}
+
+Exposed_NoCon <- Exposed %>% 
+  filter(Treatment != "Control")
+
+# Add a small positive value to the DurationTube variable
+Exposed_NoCon$DurationTube_adjusted <- Exposed_NoCon$DurationTube + 0.1  # You can use any small positive value here
+
+# Relevel Treatment variable for reference level
+Exposed_NoCon$Treatment <- relevel(Exposed_NoCon$Treatment, ref = "Anchovy")
+
+
+# Fit the gamma GLMM with 'Duration' as the response variable
+# 'Treatment'  fixed effects, and 'Site' as a random effect - Summer removed because with it the model failed to converge. Diagnostic plots show that the current model is a good fit
+Exp_TubeDur_Gamma <- glmer(DurationTube_adjusted ~ Treatment + (1 | Site), 
+                     data = Exposed_NoCon, 
+                     family = Gamma(link = "log"))
+
+summary(Exp_TubeDur_Gamma)
+
+
+#### MODEL FIT #### 
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_TubeDur_Gamma)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+```
+
+#### --- Submerged Duration
+
+Anchovy:Squid ----- NSD           
+Anchovy:Kelp Bass - NSD        
+Anchovy:Octopus --- 0.01       
+Squid:Octopus ----- NSD           
+Octopus:Kelp Bass-- NSD       
+
+```{r - Submerged Duration Stats}
+
+# Add a small positive value to the DurationTube variable
+Sub_NoCon$DurationTube_adjusted <- Sub_NoCon$DurationTube + 0.1  # You can use any small positive value here
+
+# Relevel Treatment variable so Control becomes the reference level
+Sub_NoCon $Treatment <- relevel(Sub_NoCon$Treatment, ref = "Octopus")
+
+# Fit the gamma GLMM with 'Duration' as the response variable, removed summer as the model failed to converge with this parameter. The diagnotistic plots show this model fits the data
+Sub_TubeDur_Gamma <- glmer(DurationTube_adjusted ~ Treatment + (1 | Site),
+                     data = Sub_NoCon, 
+                     family = Gamma(link = "log"))
+
+summary(Sub_TubeDur_Gamma)
+
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Sub_TubeDur_Gamma)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+# 2. Graphics
+
+#### --- Exposed Duration
+
+```{r - Duration - Exposed Graphic}
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Exp_Dur_signif <- tribble(
+  ~Treatment,  ~Times,                      ~Signif,
+  "Squid",     "Duration in Tube - Exposed",   "a",    
+  "Octopus",   "Duration in Tube - Exposed",   "b",    
+  "Anchovy",   "Duration in Tube - Exposed",   "a",    
+  "Kelpbass",  "Duration in Tube - Exposed",   "b"
+) %>% 
+  left_join(transmute(Exposed_Times_MeanSE , Treatment, Times, mean, se), 
+            by = c("Treatment", "Times")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 0.02*100)  # Adjust y-position to place significance labels above the bars
+
+Exposed_Duration = Exposed_Times_MeanSE  %>% 
+  filter(Times == "Duration in Tube - Exposed") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(x = Treatment, y = mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(y = y, label = Signif), Exp_Dur_signif, size =5) +
+  scale_fill_manual(values = c("pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Duration in Target (Seconds)", x = "", title = "Exposed") +
+  theme_classic() +
+   theme(axis.text.x = element_text(size = 15),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 15, margin = margin(t = 15)),
+        axis.title.y = element_text(size = 15),
+        plot.title = element_text(size = 20, face = "bold", color = "ivory4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "ivory", color = "#fbf9f4")) 
+
+Exposed_Duration
+  
+```
+#### --- Submerged Duration
+
+```{r - Duration - Submerged Graphic}
+
+# Creating a data frame with pairwise significance for each facet (VisitType)
+Sub_Dur_signif <- tribble(
+  ~Treatment,  ~Times,                      ~Signif,
+  "Squid",     "Duration in Tube - Submerged",   "a",    
+  "Octopus",   "Duration in Tube - Submerged",   "b",    
+  "Anchovy",   "Duration in Tube - Submerged",   "ab",    
+  "Kelpbass",  "Duration in Tube - Submerged",   "ab"
+) %>% 
+  left_join(transmute(Submerged_Times_MeanSE , Treatment, Times, mean, se), 
+            by = c("Treatment", "Times")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 10)  # Adjust y-position to place significance labels above the bars
+
+Submerged_Duration = Submerged_Times_MeanSE  %>% 
+  filter(Times == "Duration in Tube - Submerged") %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(x = Treatment, y = mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(y = y, label = Signif), Sub_Dur_signif, size =5) +
+  scale_fill_manual(values = c("pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Duration in Target (Seconds)", x = "", title = "Submerged") +
+  theme_classic() +
+    theme(axis.text.x = element_text(size = 15),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 15, margin = margin(t = 15)),
+        axis.title.y = element_text(size = 15),
+        plot.title = element_text(size = 20, face = "bold", color = "lightcyan4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "lightcyan2", color = NA)) 
+
+Submerged_Duration
+  
+```
+
+# TUBE ENTHUSIASMS
+
+# 1. Stats
+#### ---- Exposed
+```{r Tube enthusiasm stats}
+
+# Relevel Treatment variable so Control becomes the reference level
+Exposed$Treatment <- relevel(Exposed$Treatment, ref = "Control")
+
+
+#
+# 'Treatment as fixed effect, and 'Site' and 'Smmer' as a random effects
+Exp_TubeEnth_Poisson <- glmer(TubeEnter ~ Treatment + (1 | Site) + (1|Summer), 
+                           data = Exposed, 
+                           family = poisson(link = "log"))
+
+summary(Exp_TubeEnth_Poisson)
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Exp_TubeEnth_Poisson)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+
+### ---- Submerged
+```{r Tube enthusiasm stats - submerged}
+
+# Relevel Treatment variable so Control becomes the reference level
+Submerged$Treatment <- relevel(Submerged$Treatment, ref = "Anchovy")
+
+
+
+# 'Treatment' as a fixed effect, and 'Site' and 'Summer' as a random effects
+Sub_TubeEnth_Poisson <- glmer(TubeEnter ~ Treatment + (1 | Site) + (1|Summer), 
+                           data = Submerged, 
+                           family = poisson(link = "log"))
+
+summary(Sub_TubeEnth_Poisson)
+
+
+#### MODEL FIT ####
+
+# Simulate residuals
+sim_res <- simulateResiduals(Sub_TubeEnth_Poisson)
+
+# Plot residuals
+plot(sim_res)
+
+# Test for overdispersion
+testDispersion(sim_res)
+
+# Test for uniformity of residuals
+testUniformity(sim_res)
+
+# Test for zero-inflation (if applicable)
+testZeroInflation(sim_res)
+
+```
+
+
+# 2. Graphics
+
+### ---Data Prep
+```{r Tube Enthusiasms Data }
+
+TubeEnthusiasmExp = MultiSummerData %>%
+  dplyr::select(Site, Depth, Treatment, TubeEnter) %>% 
+  filter(Depth == "Exposed")
+
+#Calculating Mean & SE For Graphics 
+TubeEnthusiasmExp_Mean = TubeEnthusiasmExp %>%
+  group_by(Treatment) %>%
+  summarize(mean = mean(TubeEnter, na.rm = TRUE),
+            sd = sd(TubeEnter, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+TubeEnthusiasmSub = MultiSummerData %>%
+  dplyr::select(Site, Depth, Treatment, TubeEnter) %>% 
+  filter(Depth == "Submerged")
+
+#Calculating Mean & SE For Graphics 
+TubeEnthusiasmSub_Mean = TubeEnthusiasmSub %>%
+  group_by(Treatment) %>%
+  summarize(mean = mean(TubeEnter, na.rm = TRUE),
+            sd = sd(TubeEnter, na.rm = TRUE),
+            n = n(),
+            se = sd/sqrt(n))
+
+TubeEnthusiasmSub_Mean
+
+```
+
+### --- Exposed Enthusiasm
+
+```{r Tube Enthusiasm - Exp}
+# Creating a data frame with pairwise significance for each facet 
+Enthus_signif <- tribble(
+  ~Treatment,  ~Depth,       ~Signif,
+  "Control",   "Exposed",    "a",    
+  "Squid",     "Exposed",    "b",    
+  "Octopus",   "Exposed",    "c",    
+  "Anchovy",   "Exposed",    "b",    
+  "Kelpbass",  "Exposed",    "c",    
+) %>% 
+  left_join(transmute(TubeEnthusiasmExp_Mean, Treatment, mean, se), 
+            by = c("Treatment")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 0.5)  # Adjust y-position to place significance labels above the bars
+
+
+TubeEnthusiasmExp_Graph = TubeEnthusiasmExp_Mean  %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(Treatment, mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(y = y, label = Signif), Enthus_signif , size = 5) +
+  scale_fill_manual(values = c("grey","pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Target Entrances", x = "", title = "Exposed Trials") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15, angle = 0),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 25, face = "bold", color = "ivory4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.grid.major.y = element_line(linetype = "dashed"),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "ivory", color = "#fbf9f4")) +
+  scale_y_continuous(limits = c(0, 15))  
+TubeEnthusiasmExp_Graph
+```
+
+
+
+### --- Submerged Enthusiasm
+
+```{r Tube Enthusiasm _ Sub}
+# Creating a data frame with pairwise significance for each facet 
+Enthus_signif <- tribble(
+  ~Treatment,  ~Depth,       ~Signif,
+  "Control",   "Submerged",   "a",    
+  "Squid",     "Submerged",   "b",    
+  "Octopus",   "Submerged",   "c",    
+  "Anchovy",   "Submerged",   "d",    
+  "Kelpbass",  "Submerged",   "cd"
+) %>% 
+  left_join(transmute(TubeEnthusiasmSub_Mean, Treatment, mean, se), 
+            by = c("Treatment")) %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Squid", "Octopus", "Anchovy", "Kelpbass"), 
+         y = mean + se + 2)  # Adjust y-position to place significance labels above the bars
+
+
+TubeEnthusiasmSub_Graph = TubeEnthusiasmSub_Mean  %>% 
+  mutate(Treatment = fct_relevel(Treatment, "Control", "Squid", "Octopus", "Anchovy", "Kelpbass")) %>% 
+  ggplot(aes(Treatment, mean, fill = Treatment)) + 
+  geom_bar(stat ="identity", 
+           color = "black", 
+           position = position_dodge()) +
+  # error bar 
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), 
+                width = .25) + 
+    #Adding Significance Labels
+  geom_text(aes(y = y, label = Signif), Enthus_signif , size = 5) +
+  scale_fill_manual(values = c("grey","pink2", "mediumpurple1", "lightgoldenrod", "darkolivegreen3")) +
+  labs(y = "Target Entrances", x = "", title = "Submerged Trials") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15, angle = 0),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 25, face = "bold", color = "lightcyan4",  hjust = 0.5),
+        plot.title.position = "panel",
+        legend.position = "none",
+        panel.spacing.x = unit(2, "lines"),
+         axis.ticks = element_blank(),
+         axis.line = element_line(colour = "grey50"),
+         panel.grid = element_line(color = "#b4aea9"),
+         panel.grid.minor = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.grid.major.y = element_line(linetype = "dashed"),
+         panel.background = element_rect(fill = "white", color = "#fbf9f4"),
+         plot.background = element_rect(fill = "lightcyan2", color = NA)) +
+  scale_y_continuous(limits = c(0, 35)) 
+
+TubeEnthusiasmSub_Graph
+
+```
+
+```{r Comnbined Enthusiasm Plot}
+# Combine the two plots (one on top of the other)
+combined_enthusiasms_plot <- TubeEnthusiasmExp_Graph / TubeEnthusiasmSub_Graph +
+  plot_layout(heights = c(8, 8))
+
+# Print the combined plot
+combined_enthusiasms_plot
+
+ggsave("tubeenthusiasm.png", plot = combined_enthusiasms_plot, width = 10, height = 10, dpi = 500)
+```
+
